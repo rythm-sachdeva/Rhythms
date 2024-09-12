@@ -25,9 +25,18 @@ export async function POST(req: NextRequest)
 
         const extractedId = data.url.split("?v=")[1]; // returns an array of string before "?v=" and after;
 
-        prismaClient.Stream.create({
+       const stream = await prismaClient.stream.create({
+           data:{
             userId: data.creatorId,
-            url: data.url
+            url: data.url,
+            extractedId,
+            type: "Youtube"
+           }
+        })
+
+        return NextResponse.json({
+            message: "Added Stream",
+            id: stream.id
         })
     } catch (error) {
         return NextResponse.json({
@@ -37,4 +46,13 @@ export async function POST(req: NextRequest)
         })
     }
 
+}
+
+export async function GET(req: NextRequest) {
+    const creatorId = req.nextUrl.searchParams.get("creatorId");
+    const streams = await prismaClient.stream.findMany({
+        where:{
+            userId: creatorId ?? ""
+        }
+    })
 }

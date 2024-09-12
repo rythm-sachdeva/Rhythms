@@ -12,7 +12,7 @@ const Appbar = () => {
     <div>
 
         {session.data?.user &&  <button onClick={()=>signOut()}>Sign out</button>}
-        {!session.data?.user && <button onClick={()=>signIn()}>Sign in with Google</button> }
+        {!session.data?.user && <button onClick={()=>signIn("google")}>Sign in with Google</button> }
     </div>
 
    </div>

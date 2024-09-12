@@ -15,9 +15,9 @@ datasource db {
 
 model User {
 id     String     @id @default(uuid())
-email  String     
+email  String     @unique
 provider Provider
-role    Role
+role    Role?
 streams Stream[]
 upvotes Upvote[]
 }
