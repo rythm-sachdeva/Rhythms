@@ -1,9 +1,12 @@
 "use client"
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ThumbsUp, ThumbsDown, Play, Pause } from "lucide-react"
+import axios from 'axios'
+
+const REFRESH_INTERVAL= 10*1000;
 
 export default function Dashboard() {
   const [videoUrl, setVideoUrl] = useState('')
@@ -18,6 +21,19 @@ export default function Dashboard() {
     thumbnail: "/placeholder.svg?height=270&width=480"
   })
   const [isPlaying, setIsPlaying] = useState(true)
+  
+  async function refreshstreams()
+  {
+    const res = await axios.get('/api/streams/mystream')
+  }
+
+
+  useEffect(()=>{
+    refreshstreams();
+    const interval = setInterval(()=>{
+
+    },REFRESH_INTERVAL)
+  },[]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +51,12 @@ export default function Dashboard() {
     setQueue(queue.map(item => 
       item.id === id ? { ...item, votes: item.votes + increment } : item
     ).sort((a, b) => b.votes - a.votes))
+
+    fetch('/api/streams/upvote',{
+      body: JSON.stringify({
+        streamId: id
+      })
+    })
   }
 
   return (
