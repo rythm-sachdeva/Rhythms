@@ -5,16 +5,28 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ThumbsUp, ThumbsDown, Play, Pause } from "lucide-react"
 import axios from 'axios'
+import { YT_REGEX } from '../lib/utils'
+
+
+
+import { ColumnSpacingIcon } from '@radix-ui/react-icons'
 
 const REFRESH_INTERVAL= 10*1000;
+interface Video{
+  "id":string,
+  "url":string,
+  "extractedId": string,
+  "type": string,
+  "title":string,
+  "smallImg": string,
+  "bigiImg":String
+  
+}
 
-export default function Dashboard() {
+export default  function Dashboard() {
   const [videoUrl, setVideoUrl] = useState('')
-  const [queue, setQueue] = useState([
-    { id: 1, title: "Song 1", votes: 5, thumbnail: "/placeholder.svg?height=90&width=120" },
-    { id: 2, title: "Song 2", votes: 3, thumbnail: "/placeholder.svg?height=90&width=120" },
-    { id: 3, title: "Song 3", votes: 2, thumbnail: "/placeholder.svg?height=90&width=120" },
-  ])
+  const [imagePreview,setImagePreview] = useState('')
+  const [queue, setQueue] = useState<Video[]>([])
   const [currentVideo, setCurrentVideo] = useState({
     id: 0,
     title: "Current Song",
@@ -25,6 +37,17 @@ export default function Dashboard() {
   async function refreshstreams()
   {
     const res = await axios.get('/api/streams/mystream')
+  }
+  const updateImage= async ( s : string )=>
+  {
+    const isYt = YT_REGEX.test(s);
+
+   if(isYt)
+     {
+      const extractedId = s.split("?v=")[1]; 
+      const data = await axios.get(`/api/previewImage/${extractedId}`);
+      setImagePreview(data.data.url.url)
+     }
   }
 
 
@@ -37,26 +60,19 @@ export default function Dashboard() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const newVideo = {
-      id: queue.length + 1,
-      title: `New Song ${queue.length + 1}`,
-      votes: 0,
-      thumbnail: "/placeholder.svg?height=90&width=120"
-    }
-    setQueue([...queue, newVideo])
-    setVideoUrl('')
+    
   }
 
-  const handleVote = (id: number, increment: number) => {
-    setQueue(queue.map(item => 
-      item.id === id ? { ...item, votes: item.votes + increment } : item
-    ).sort((a, b) => b.votes - a.votes))
+  const handleVote = (id: string, increment: number) => {
+    // setQueue(queue.map(item => 
+    //   item.id === id ? { ...item, votes: item.votes + increment } : item
+    // ).sort((a, b) => b.votes - a.votes))
 
-    fetch('/api/streams/upvote',{
-      body: JSON.stringify({
-        streamId: id
-      })
-    })
+    // fetch('/api/streams/upvote',{
+    //   body: JSON.stringify({
+    //     streamId: id
+    //   })
+    // })
   }
 
   return (
@@ -96,7 +112,9 @@ export default function Dashboard() {
                 type="url"
                 placeholder="Paste YouTube URL here"
                 value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
+                onChange={(e) => {setVideoUrl(e.target.value)
+                  updateImage(e.target.value);
+                }}
                 className="bg-gray-700 border-gray-600 text-white"
               />
               <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white">
@@ -105,7 +123,9 @@ export default function Dashboard() {
             </form>
             {videoUrl && (
               <div className="mt-4 aspect-video bg-gray-700 rounded-lg overflow-hidden">
-                <img src="/placeholder.svg?height=180&width=320" alt="Video preview" className="w-full h-full object-cover" />
+                {
+                 <img src={imagePreview} alt="" className="w-full h-full object-cover" />
+                }
               </div>
             )}
           </CardContent>
@@ -120,10 +140,10 @@ export default function Dashboard() {
           <ul className="space-y-4">
             {queue.map((item) => (
               <li key={item.id} className="flex items-center space-x-4 bg-gray-700 p-4 rounded-lg">
-                <img src={item.thumbnail} alt={item.title} className="w-20 h-15 object-cover rounded" />
+                <img src="" alt={item.title} className="w-20 h-15 object-cover rounded" />
                 <div className="flex-grow">
                   <h4 className="font-semibold">{item.title}</h4>
-                  <p className="text-sm text-gray-400">Votes: {item.votes}</p>
+                  <p className="text-sm text-gray-400">Votes:</p>
                 </div>
                 <div className="flex space-x-2">
                   <Button 
