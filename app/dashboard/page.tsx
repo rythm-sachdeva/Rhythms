@@ -46,7 +46,7 @@ export default  function Dashboard() {
      {
       const extractedId = s.split("?v=")[1]; 
       const data = await axios.get(`/api/previewImage/${extractedId}`);
-      setImagePreview(data.data.url.url)
+      setImagePreview(data.data.bigImg.url)
      }
   }
 
@@ -58,8 +58,21 @@ export default  function Dashboard() {
     },REFRESH_INTERVAL)
   },[]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const extractedId = videoUrl?.split("?v=")[1]; 
+    const res = await axios.get(`/api/previewImage/${extractedId}`)
+    const nevideo : Video = {
+      id  : String(queue.length+1),
+      url : videoUrl,
+      extractedId:extractedId,
+      type:"video",
+      title: res?.data?.title ?? "",
+      smallImg:res.data.smallImg.url,
+      bigiImg: res.data.bigImg.url
+    }
+    setQueue([...queue,nevideo]);
+    setVideoUrl('');
     
   }
 
@@ -140,7 +153,7 @@ export default  function Dashboard() {
           <ul className="space-y-4">
             {queue.map((item) => (
               <li key={item.id} className="flex items-center space-x-4 bg-gray-700 p-4 rounded-lg">
-                <img src="" alt={item.title} className="w-20 h-15 object-cover rounded" />
+                <img src={item.smallImg} alt={item.title} className="w-20 h-15 object-cover rounded" />
                 <div className="flex-grow">
                   <h4 className="font-semibold">{item.title}</h4>
                   <p className="text-sm text-gray-400">Votes:</p>

@@ -11,8 +11,10 @@ export async function GET(req: NextRequest,{ params }: { params: { slug: string 
     console.log(slug);
     const extractedId = slug;
      const res = await youtubesearchapi.GetVideoDetails(extractedId);
+     console.log(res);
+     const title = res?.title;
      const Thumbnails = res?.thumbnail?.thumbnails;
      Thumbnails.sort((a:{width:number},b:{width:number})=> a.width<b.width ? -1 : 1);
-     console.log(Thumbnails[Thumbnails.length - 1]);
-     return NextResponse.json({url: Thumbnails[Thumbnails.length - 1]},{status: 200})
+    //  console.log(Thumbnails[Thumbnails.length - 1]);
+     return NextResponse.json({title:title,bigImg: Thumbnails[Thumbnails.length - 1],smallImg: Thumbnails[Thumbnails.length-2]},{status: 200})
 }
