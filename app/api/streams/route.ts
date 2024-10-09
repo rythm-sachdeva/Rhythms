@@ -2,17 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prismaClient } from "../../lib/db";
 import { YT_REGEX } from "../../lib/utils";
+import { getServerSession } from "next-auth";
 
 //@ts-ignore
 import youtubesearchapi from "youtube-search-api"
 
 const CreateStreamSchema = z.object({
-    creatorId: z.string(),
     url: z.string()
 })
 
 export async function POST(req: NextRequest)
 {
+    const session = await getServerSession();
+    const user = await prismaClient.user.findFirst({
+        where: {
+            email: session?.user?.email || undefined  
+        }
+    });
     try {
         const data = CreateStreamSchema.parse(await req.json());
         const isYt = YT_REGEX.test(data.url)
@@ -33,7 +39,7 @@ export async function POST(req: NextRequest)
 
        const stream = await prismaClient.stream.create({
            data:{
-            userId: data.creatorId,
+            userId: String(user?.id),
             url: data.url,
             extractedId,
             type: "Youtube",

@@ -14,6 +14,7 @@ import { ColumnSpacingIcon } from '@radix-ui/react-icons'
 const REFRESH_INTERVAL= 10*1000;
 interface Video{
   "id":string,
+  "streamId": string,
   "url":string,
   "extractedId": string,
   "type": string,
@@ -56,14 +57,18 @@ export default  function Dashboard() {
     const interval = setInterval(()=>{
 
     },REFRESH_INTERVAL)
-  },[]);
+  },[queue]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const extractedId = videoUrl?.split("?v=")[1]; 
     const res = await axios.get(`/api/previewImage/${extractedId}`)
+    const data = await fetch('/api/streams',{method:'POST',body:JSON.stringify({url:videoUrl})})
+    const strResponse = await data.json();
+    // console.log(strResponse);
     const nevideo : Video = {
       id  : String(queue.length+1),
+      streamId: strResponse.id,
       url : videoUrl,
       extractedId:extractedId,
       type:"video",
