@@ -34,9 +34,9 @@ try {
         data:{
             userId: user.id,
             streamId: data.streamId
-
         }
     })
+    return NextResponse.json({message:"Upvoted"},{status:200})
 } catch (error) {
     return NextResponse.json({
         message: "Error While Upvoting"

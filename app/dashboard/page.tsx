@@ -6,12 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ThumbsUp, ThumbsDown, Play, Pause } from "lucide-react"
 import axios from 'axios'
 import { YT_REGEX } from '../lib/utils'
-
+import LiteYoutubeEmbed from 'react-lite-youtube-embed'
+import 'react-lite-youtube-embed/dist/LiteYouTubeEmbed.css'
 
 
 import { ColumnSpacingIcon } from '@radix-ui/react-icons'
+import { boolean } from 'zod'
 
 const REFRESH_INTERVAL= 10*1000;
+const creatorId = 'e5e31405-3c4a-4017-a200-b60983dc246b';
 interface Video{
   "id":string,
   "streamId": string,
@@ -19,8 +22,10 @@ interface Video{
   "extractedId": string,
   "type": string,
   "title":string,
+   "votes": number,
   "smallImg": string,
-  "bigiImg":String
+  "bigiImg":String,
+  haveUpvoted:boolean
   
 }
 
@@ -34,6 +39,7 @@ export default  function Dashboard() {
     thumbnail: "/placeholder.svg?height=270&width=480"
   })
   const [isPlaying, setIsPlaying] = useState(true)
+  
   
   async function refreshstreams()
   {
@@ -50,12 +56,12 @@ export default  function Dashboard() {
       setImagePreview(data.data.bigImg.url)
      }
   }
-
+ 
 
   useEffect(()=>{
     refreshstreams();
     const interval = setInterval(()=>{
-
+    
     },REFRESH_INTERVAL)
   },[queue]);
 
@@ -63,7 +69,7 @@ export default  function Dashboard() {
     e.preventDefault()
     const extractedId = videoUrl?.split("?v=")[1]; 
     const res = await axios.get(`/api/previewImage/${extractedId}`)
-    const data = await fetch('/api/streams',{method:'POST',body:JSON.stringify({url:videoUrl})})
+    const data = await fetch('/api/streams',{method:'POST',body:JSON.stringify({creatorId,url:videoUrl})})
     const strResponse = await data.json();
     // console.log(strResponse);
     const nevideo : Video = {
@@ -74,23 +80,25 @@ export default  function Dashboard() {
       type:"video",
       title: res?.data?.title ?? "",
       smallImg:res.data.smallImg.url,
-      bigiImg: res.data.bigImg.url
+      bigiImg: res.data.bigImg.url,
+      votes:0,
+      haveUpvoted:false
     }
     setQueue([...queue,nevideo]);
     setVideoUrl('');
-    
   }
 
   const handleVote = (id: string, increment: number) => {
-    // setQueue(queue.map(item => 
-    //   item.id === id ? { ...item, votes: item.votes + increment } : item
-    // ).sort((a, b) => b.votes - a.votes))
+    setQueue(queue.map(item => 
+      item.streamId === id ? { ...item, votes: item.votes + increment , haveUpvoted: !item.haveUpvoted} : item
+    ).sort((a, b) => b.votes - a.votes))
 
-    // fetch('/api/streams/upvote',{
-    //   body: JSON.stringify({
-    //     streamId: id
-    //   })
-    // })
+    fetch(`/api/streams/${increment===1? "upvote" : "downvotes"}`,{
+      method:'POST',
+      body: JSON.stringify({
+        streamId: id
+      })
+    })
   }
 
   return (
@@ -104,7 +112,7 @@ export default  function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="aspect-video bg-gray-700 rounded-lg overflow-hidden mb-4">
-              <img src={currentVideo.thumbnail} alt={currentVideo.title} className="w-full h-full object-cover" />
+              {videoUrl && videoUrl.match(YT_REGEX) && (<LiteYoutubeEmbed title="Curent Song" id={videoUrl.split("?v=")[1]}/>)}
             </div>
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold">{currentVideo.title}</h3>
@@ -161,13 +169,14 @@ export default  function Dashboard() {
                 <img src={item.smallImg} alt={item.title} className="w-20 h-15 object-cover rounded" />
                 <div className="flex-grow">
                   <h4 className="font-semibold">{item.title}</h4>
-                  <p className="text-sm text-gray-400">Votes:</p>
+                  <p className="text-sm text-gray-400">Upvotes:{item.votes}</p>
                 </div>
                 <div className="flex space-x-2">
                   <Button 
                     variant="outline" 
                     size="icon" 
-                    onClick={() => handleVote(item.id, 1)}
+                    disabled={(item.haveUpvoted)}
+                    onClick={() => handleVote(item.streamId, 1)}
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     <ThumbsUp className="h-4 w-4" />
@@ -175,7 +184,8 @@ export default  function Dashboard() {
                   <Button 
                     variant="outline" 
                     size="icon" 
-                    onClick={() => handleVote(item.id, -1)}
+                    disabled={!item.haveUpvoted}
+                    onClick={() => handleVote(item.streamId, -1)}
                     className="bg-red-600 hover:bg-red-700 text-white"
                   >
                     <ThumbsDown className="h-4 w-4" />

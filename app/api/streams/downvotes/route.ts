@@ -29,17 +29,21 @@ const session = await getServerSession();
 
 
 try {
-    const data =  UpvoteSchema.parse(await req.json());
+    const data = UpvoteSchema.parse(await req.json());
     await prismaClient.upvote.delete({
-        where:{
-            userId_StreamId:{
+        where: {
+            userId_streamId: {
                 userId: user.id,
                 streamId: data.streamId
             }
-
         }
+    });
+    return NextResponse.json({
+        message: "Done!"
     })
 } catch (error) {
+    //@ts-ignore
+    console.log(error.message)
     return NextResponse.json({
         message: "Error While Downvoting"
     },{

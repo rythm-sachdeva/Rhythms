@@ -41,6 +41,7 @@ userId String
 streamId String
 user  User   @relation(fields: [userId] , references: [id])
 stream Stream  @relation(fields: [streamId], references: [id])
+@@unique([userId,streamId])
 }
 
 enum Streamtype{

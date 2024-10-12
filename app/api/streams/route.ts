@@ -8,6 +8,7 @@ import { getServerSession } from "next-auth";
 import youtubesearchapi from "youtube-search-api"
 
 const CreateStreamSchema = z.object({
+    creatorId: z.string(),
     url: z.string()
 })
 
