@@ -25,11 +25,11 @@ interface Video{
    "votes": number,
   "smallImg": string,
   "bigiImg":String,
-  haveUpvoted:boolean
+  "haveUpvoted":boolean
   
 }
 
-export default  function Dashboard() {
+export default  function StreamView({creatorId}:{creatorId:string}) {
   const [videoUrl, setVideoUrl] = useState('')
   const [imagePreview,setImagePreview] = useState('')
   const [queue, setQueue] = useState<Video[]>([])
@@ -44,7 +44,12 @@ export default  function Dashboard() {
   
   async function refreshstreams()
   {
-    const res = await axios.get('/api/streams/mystream')
+    const res = await fetch(`/api/streams/?creatorId=${creatorId}`,{
+        credentials:"include"
+    });
+    const json = await res.json();
+    setQueue(json.streams.sort((a:any,b:any)=> a.upvote<b.upvote ? 1 : -1))
+
   }
   const updateImage= async ( s : string )=>
   {
