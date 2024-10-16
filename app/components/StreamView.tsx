@@ -17,7 +17,6 @@ const REFRESH_INTERVAL= 10*1000;
 const creatorId = 'e5e31405-3c4a-4017-a200-b60983dc246b';
 interface Video{
   "id":string,
-  "streamId": string,
   "url":string,
   "extractedId": string,
   "type": string,
@@ -69,9 +68,9 @@ export default  function StreamView({creatorId}:{creatorId:string}) {
   useEffect(()=>{
     refreshstreams();
     const interval = setInterval(()=>{
-    
+    refreshstreams();
     },REFRESH_INTERVAL)
-  },[queue]);
+  },[]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,8 +82,7 @@ export default  function StreamView({creatorId}:{creatorId:string}) {
     const strResponse = await data.json();
     // console.log(strResponse);
     const nevideo : Video = {
-      id  : String(queue.length+1),
-      streamId: strResponse.id,
+      id  : strResponse.id,
       url : videoUrl,
       extractedId:extractedId,
       type:"video",
@@ -101,7 +99,7 @@ export default  function StreamView({creatorId}:{creatorId:string}) {
 
   const handleVote = (id: string, increment: number) => {
     setQueue(queue.map(item => 
-      item.streamId === id ? { ...item, votes: item.votes + increment , haveUpvoted: !item.haveUpvoted} : item
+      item.id === id ? { ...item, votes: item.votes + increment , haveUpvoted: !item.haveUpvoted} : item
     ).sort((a, b) => b.votes - a.votes))
 
     fetch(`/api/streams/${increment===1? "upvote" : "downvotes"}`,{
@@ -187,7 +185,7 @@ export default  function StreamView({creatorId}:{creatorId:string}) {
                     variant="outline" 
                     size="icon" 
                     disabled={(item.haveUpvoted)}
-                    onClick={() => handleVote(item.streamId, 1)}
+                    onClick={() => handleVote(item.id, 1)}
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     <ThumbsUp className="h-4 w-4" />
@@ -196,7 +194,7 @@ export default  function StreamView({creatorId}:{creatorId:string}) {
                     variant="outline" 
                     size="icon" 
                     disabled={!item.haveUpvoted}
-                    onClick={() => handleVote(item.streamId, -1)}
+                    onClick={() => handleVote(item.id, -1)}
                     className="bg-red-600 hover:bg-red-700 text-white"
                   >
                     <ThumbsDown className="h-4 w-4" />

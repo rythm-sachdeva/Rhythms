@@ -17,19 +17,18 @@ const REFRESH_INTERVAL= 10*1000;
 const creatorId = 'e5e31405-3c4a-4017-a200-b60983dc246b';
 interface Video{
   "id":string,
-  "streamId": string,
   "url":string,
   "extractedId": string,
   "type": string,
   "title":string,
    "votes": number,
-  "smallImg": string,
+  "smalImg": string,
   "bigiImg":String,
-  haveUpvoted:boolean
+  "haveUpvoted":boolean
   
 }
 
-export default  function Dashboard() {
+export default  function StreamView() {
   const [videoUrl, setVideoUrl] = useState('')
   const [imagePreview,setImagePreview] = useState('')
   const [queue, setQueue] = useState<Video[]>([])
@@ -44,7 +43,12 @@ export default  function Dashboard() {
   
   async function refreshstreams()
   {
-    const res = await axios.get('/api/streams/mystream')
+    const res = await fetch(`/api/streams/?creatorId=${creatorId}`,{
+        credentials:"include"
+    });
+    const json = await res.json();
+    setQueue(json.streams.sort((a:any,b:any)=> a.upvote<b.upvote ? 1 : -1))
+
   }
   const updateImage= async ( s : string )=>
   {
@@ -64,9 +68,9 @@ export default  function Dashboard() {
   useEffect(()=>{
     refreshstreams();
     const interval = setInterval(()=>{
-    
+      refreshstreams();
     },REFRESH_INTERVAL)
-  },[queue]);
+  },[]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,13 +82,12 @@ export default  function Dashboard() {
     const strResponse = await data.json();
     // console.log(strResponse);
     const nevideo : Video = {
-      id  : String(queue.length+1),
-      streamId: strResponse.id,
+      id  : strResponse.id,
       url : videoUrl,
       extractedId:extractedId,
       type:"video",
       title: res?.data?.title ?? "",
-      smallImg:res.data.smallImg.url,
+      smalImg:res.data.smallImg.url,
       bigiImg: res.data.bigImg.url,
       votes:0,
       haveUpvoted:false
@@ -96,7 +99,7 @@ export default  function Dashboard() {
 
   const handleVote = (id: string, increment: number) => {
     setQueue(queue.map(item => 
-      item.streamId === id ? { ...item, votes: item.votes + increment , haveUpvoted: !item.haveUpvoted} : item
+      item.id === id ? { ...item, votes: item.votes + increment , haveUpvoted: !item.haveUpvoted} : item
     ).sort((a, b) => b.votes - a.votes))
 
     fetch(`/api/streams/${increment===1? "upvote" : "downvotes"}`,{
@@ -172,7 +175,7 @@ export default  function Dashboard() {
           <ul className="space-y-4">
             {queue.map((item) => (
               <li key={item.id} className="flex items-center space-x-4 bg-gray-700 p-4 rounded-lg">
-                <img src={item.smallImg} alt={item.title} className="w-20 h-15 object-cover rounded" />
+                <img src={item.smalImg} alt={item.title} className="w-20 h-15 object-cover rounded" />
                 <div className="flex-grow">
                   <h4 className="font-semibold">{item.title}</h4>
                   <p className="text-sm text-gray-400">Upvotes:{item.votes}</p>
@@ -182,7 +185,7 @@ export default  function Dashboard() {
                     variant="outline" 
                     size="icon" 
                     disabled={(item.haveUpvoted)}
-                    onClick={() => handleVote(item.streamId, 1)}
+                    onClick={() => handleVote(item.id, 1)}
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     <ThumbsUp className="h-4 w-4" />
@@ -191,7 +194,7 @@ export default  function Dashboard() {
                     variant="outline" 
                     size="icon" 
                     disabled={!item.haveUpvoted}
-                    onClick={() => handleVote(item.streamId, -1)}
+                    onClick={() => handleVote(item.id, -1)}
                     className="bg-red-600 hover:bg-red-700 text-white"
                   >
                     <ThumbsDown className="h-4 w-4" />
