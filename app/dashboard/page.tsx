@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,9 +9,8 @@ import { YT_REGEX } from '../lib/utils'
 import LiteYoutubeEmbed from 'react-lite-youtube-embed'
 import 'react-lite-youtube-embed/dist/LiteYouTubeEmbed.css'
 
-
-import { ColumnSpacingIcon } from '@radix-ui/react-icons'
-import { boolean } from 'zod'
+//@ts-ignore
+import YouTubePlayer from 'youtube-player'
 
 const REFRESH_INTERVAL= 10*1000;
 const creatorId = 'e5e31405-3c4a-4017-a200-b60983dc246b';
@@ -32,13 +31,10 @@ export default  function StreamView() {
   const [videoUrl, setVideoUrl] = useState('')
   const [imagePreview,setImagePreview] = useState('')
   const [queue, setQueue] = useState<Video[]>([])
-  const [currentVideo, setCurrentVideo] = useState({
-    id: 0,
-    title: "Current Song",
-    thumbnail: "/placeholder.svg?height=270&width=480"
-  })
+  const [currentVideo, setCurrentVideo] = useState<Video | null>();
   const [isPlaying, setIsPlaying] = useState(true);
   const [loading,setLoading] = useState(false);
+  const videoPlayerRef = useRef();
   
   
   async function refreshstreams()
@@ -48,6 +44,9 @@ export default  function StreamView() {
     });
     const json = await res.json();
     setQueue(json.streams.sort((a:any,b:any)=> a.upvote<b.upvote ? 1 : -1))
+    // console.log(json)
+    setCurrentVideo(json.activeStream.stream)
+
 
   }
   const updateImage= async ( s : string )=>
@@ -71,6 +70,20 @@ export default  function StreamView() {
       refreshstreams();
     },REFRESH_INTERVAL)
   },[]);
+
+  useEffect(()=>{
+   let player = YouTubePlayer(videoPlayerRef.current);
+  //  console.log(player)
+   player.loadVideoById(currentVideo?.extractedId);
+   player.playVideo();
+   function eventHandler(event:any)
+    {
+      if(event.data === 0)
+         playNext();
+    }
+    player.on('stateChange',eventHandler);
+   return ()=> player.destroy()
+  },[currentVideo,videoPlayerRef])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -110,6 +123,16 @@ export default  function StreamView() {
     })
   }
 
+  const playNext = async () =>{
+    if(queue.length>0)
+    {
+      const data = await fetch('/api/streams/next');
+      const json = await data.json();
+      setCurrentVideo(json.stream);
+      setQueue(q=>q.filter(x=> x.id!== json?.stream?.id));
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <h1 className="text-3xl font-bold mb-8 text-center text-purple-400">Stream Dashboard</h1>
@@ -120,18 +143,11 @@ export default  function StreamView() {
             <CardTitle className="text-purple-400">Current Song</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="aspect-video bg-gray-700 rounded-lg overflow-hidden mb-4">
-              {videoUrl && videoUrl.match(YT_REGEX) && (<LiteYoutubeEmbed title="Curent Song" id={videoUrl.split("?v=")[1]}/>)}
+            <div ref={videoPlayerRef} className="aspect-video bg-gray-700 rounded-lg overflow-hidden mb-4">
             </div>
             <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold">{currentVideo.title}</h3>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              <Button type="submit" onClick={playNext} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                Next Song
               </Button>
             </div>
           </CardContent>

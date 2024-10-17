@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     {
         return NextResponse.json({message: "CreatorId not found"},{status:411});
     }
-    const streams = await prismaClient.stream.findMany({
+    const [streams,activeStream] = await Promise.all([prismaClient.stream.findMany({
         where:{
             userId: creatorId ?? ""
         },
@@ -93,10 +93,16 @@ export async function GET(req: NextRequest) {
                 }
             }
         }
-    })
+    }),prismaClient.currentStream.findFirst({
+        where:{
+            userId: creatorId ?? ""
+        },
+        include:{stream:true}
+    }) ])
 
     return NextResponse.json({streams:
-        streams.map(({_count, ...rest})=>({...rest,votes:_count.upvotes,haveUpvoted: rest.upvotes.length ? true : false}))
+        streams.map(({_count, ...rest})=>({...rest,votes:_count.upvotes,haveUpvoted: rest.upvotes.length ? true : false})),
+        activeStream
     })
 
 }
