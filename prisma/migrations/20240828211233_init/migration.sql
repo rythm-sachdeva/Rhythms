@@ -1,8 +1,5 @@
 -- CreateEnum
-CREATE TYPE "Streamtype" AS ENUM ('Youtube', 'Spotify');
-
--- CreateEnum
-CREATE TYPE "Role" AS ENUM ('Streamer', 'EndUser');
+CREATE TYPE "StreamType" AS ENUM ('Spotify', 'Youtube');
 
 -- CreateEnum
 CREATE TYPE "Provider" AS ENUM ('Google');
@@ -12,7 +9,6 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "provider" "Provider" NOT NULL,
-    "role" "Role" NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -20,7 +16,7 @@ CREATE TABLE "User" (
 -- CreateTable
 CREATE TABLE "Stream" (
     "id" TEXT NOT NULL,
-    "type" "Streamtype" NOT NULL,
+    "type" "StreamType" NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "userId" TEXT NOT NULL,
 
@@ -35,6 +31,9 @@ CREATE TABLE "Upvote" (
 
     CONSTRAINT "Upvote_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Upvote_userId_streamId_key" ON "Upvote"("userId", "streamId");
 
 -- AddForeignKey
 ALTER TABLE "Stream" ADD CONSTRAINT "Stream_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
