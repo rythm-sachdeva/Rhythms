@@ -13,6 +13,7 @@ import { Appbar } from '../components/Appbar'
 import { YT_REGEX } from '../lib/utils'
 //@ts-ignore
 import YouTubePlayer from 'youtube-player';
+import Dialog from './Modal'
 
 interface Video {
     "id": string,
@@ -141,32 +142,7 @@ export default function StreamView({
     }
   }
 
-  const handleShare = () => {
-    const protocol = window.location.protocol=== "http:" ? "http:" : "https:"
-    const shareableLink = protocol +`//${window.location.hostname}/creator/${creatorId}`
-    navigator.clipboard.writeText(shareableLink).then(() => {
-      toast.success('Link copied to clipboard!', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      })
-    }, (err) => {
-      console.error('Could not copy text: ', err)
-      toast.error('Failed to copy link. Please try again.', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-      })
-    })
-  }
+  
 
   return (
     <div className="flex flex-col min-h-screen bg-[rgb(10,10,10)] text-gray-200">
@@ -208,10 +184,10 @@ export default function StreamView({
                 <div className='col-span-2'>
                     <div className="max-w-4xl mx-auto p-4 space-y-6 w-full">
                         <div className="flex justify-between items-center">
-                        <h1 className="text-xl font-bold text-white">Add a song</h1>
-                        <Button onClick={handleShare} className="bg-purple-700 hover:bg-purple-800 text-white">
-                            <Share2 className="mr-2 h-4 w-4" /> Share
-                        </Button>
+                           <h1 className="text-xl font-bold text-white">Add a song</h1>
+                            <div>
+                            <Dialog creatorId={creatorId}/>
+                            </div>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-2">
