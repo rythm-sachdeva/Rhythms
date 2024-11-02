@@ -44,7 +44,7 @@
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-username/rhythms.git
+   git clone https://github.com/rythm-sachdeva/rhythms.git
    cd rhythms
    ```
 
