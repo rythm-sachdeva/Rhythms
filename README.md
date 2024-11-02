@@ -1,5 +1,3 @@
----
-
 # Rhythms
 
 **Rhythms** is a SaaS application built with Next.js that enables creators to set up collaborative music rooms. Creators can add YouTube song links, and users can join via a shared link, upvote songs, and listen as the most popular track plays next. This app is perfect for events, virtual meetups, or social hangouts centered around music.
@@ -90,11 +88,10 @@ Create a `.env` file in the root directory and add the following environment var
 DATABASE_URL="postgresql://user:password@localhost:5432/rhythms"
 
 # OAuth
-NEXT_PUBLIC_GOOGLE_CLIENT_ID="your_google_client_id"
-NEXT_PUBLIC_GOOGLE_CLIENT_SECRET="your_google_client_secret"
+GOOGLE_CLIENT_ID="your_google_client_id"
+GOOGLE_CLIENT_SECRET="your_google_client_secret"
+NEXT_SECRECT="your_secret"
 
-# Prisma
-SHADOW_DATABASE_URL="your_shadow_database_url"
 ```
 
 ---
