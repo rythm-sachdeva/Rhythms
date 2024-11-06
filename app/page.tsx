@@ -10,7 +10,7 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
       <Appbar />
-      <Redirect />
+      <Redirect/>
       <main className="flex-1 py-12 md:py-24 lg:py-32">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center space-y-4 text-center">

@@ -8,9 +8,7 @@ import { useAppSelector } from '@/lib/hooks'
 
 export default function Component() {
 
-    const userId = useAppSelector((state)=> state.user);
-
-    console.log(userId);
+    const creatorId = useAppSelector((state)=> state.user);
   
-    return <StreamView creatorId={userId} playVideo={true} />
+    return <StreamView creatorId={creatorId} playVideo={true} />
 }

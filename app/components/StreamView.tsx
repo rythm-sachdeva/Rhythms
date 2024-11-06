@@ -14,6 +14,9 @@ import { YT_REGEX } from '../lib/utils'
 //@ts-ignore
 import YouTubePlayer from 'youtube-player';
 import Dialog from './Modal'
+import { useAppSelector } from '@/lib/hooks'
+import { stat } from 'fs'
+import { setUserId } from '@/lib/slices/user/user'
 
 interface Video {
     "id": string,
@@ -44,13 +47,14 @@ export default function StreamView({
   const [loading, setLoading] = useState(false);
   const [playNextLoader, setPlayNextLoader] = useState(false);
   const videoPlayerRef = useRef<HTMLDivElement>();
+  const [userId,setUserId] = useState("")
 
   async function refreshStreams() {
     const res = await fetch(`/api/streams/?creatorId=${creatorId}`, {
         credentials: "include"
     });
     const json = await res.json();
-    setQueue(json.streams.sort((a: any, b: any) => a.upvotes < b.upvotes ? 1 : -1));
+    setQueue(json?.streams?.sort((a: any, b: any) => a.upvotes < b.upvotes ? 1 : -1));
     
     setCurrentVideo(video => {
         if (video?.id === json.activeStream?.stream?.id) {
@@ -152,9 +156,9 @@ export default function StreamView({
                 <div className='col-span-3'>
                     <div className="space-y-4">
                         <h2 className="text-2xl font-bold text-white">Upcoming Songs</h2>
-                        {queue.length === 0 && <Card className="bg-gray-900 border-gray-800 w-full">
+                        {(!queue || queue?.length === 0) && <Card className="bg-gray-900 border-gray-800 w-full">
                             <CardContent className="p-4"><p className="text-center py-8 text-gray-400">No videos in queue</p></CardContent></Card>}
-                        {queue.map((video) => (
+                        {queue?.map((video) => (
                             <Card key={video.id} className="bg-gray-900 border-gray-800">
                             <CardContent className="p-4 flex items-center space-x-4">
                                 <img 
@@ -253,4 +257,8 @@ export default function StreamView({
         />
     </div>
   )
+}
+
+function dispatch(arg0: any) {
+    throw new Error('Function not implemented.')
 }
