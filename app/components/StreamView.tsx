@@ -364,7 +364,10 @@ export default function StreamView({
                                         onChange={(e) => setInputLink(e.target.value)}
                                         className="bg-gray-900 text-white border-gray-700 placeholder-gray-500"
                                     />
-                                    <SearchResults isSearching={false} searchList={searchList} onSelectSearchResult={handleClick} />
+                                   
+                                    <SearchResults isSearching={false} searchList={searchList} 
+                                     //@ts-ignore
+                                    onSelectSearchResult={handleClick} />
                                     <Button disabled={loading} type="submit" className="w-full bg-purple-700 hover:bg-purple-800 text-white">{loading ? "Loading..." : "Add to Queue"}</Button>
                                 </> : <>
                                     <Input

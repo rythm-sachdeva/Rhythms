@@ -42,9 +42,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ isSearching, searchList, 
                 <div 
                     key={video.id} 
                     className="flex items-center p-2 space-x-3 bg-gray-900 border border-gray-800 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors"
+                    //@ts-ignore
                     onClick={() => onSelectSearchResult(video?.id)}
                 >
+                    
                     <img 
+                       //@ts-ignore
                         src={video.thumbnail?.thumbnails[0]?.url || 'https://placehold.co/120x90/1a1a1a/ffffff?text=Video'} 
                         alt={video.title} 
                         className="w-24 h-14 object-cover rounded"
