@@ -8,15 +8,17 @@ import { getServerSession } from "next-auth";
 
 const CreateStreamSchema = z.object({
     creatorId: z.string(),
-    url: z.string()
+    url: z.string().optional(),
+    id: z.string().optional()
 });
 
 const MAX_QUEUE_LEN = 20;
 
 export async function POST(req: NextRequest) {
     try {
+        let vidId;
         const data = CreateStreamSchema.parse(await req.json());
-        const isYt = data.url.match(YT_REGEX)
+       if(data.url){ const isYt = data.url.match(YT_REGEX)
         if (!isYt) {
             return NextResponse.json({
                 message: "Wrong URL format"
@@ -24,10 +26,25 @@ export async function POST(req: NextRequest) {
                 status: 411
             })    
         }
+        vidId =data.url.split("?v=")[1]
+       }
+       else{
+        if(!data.id){
+            return NextResponse.json({
+                message: "No URL or ID provided"
+            }, {
+                status: 411
+            })    
+        }
+        vidId = data.id
+       }
 
-        const extractedId = data.url.split("?v=")[1];
+        
+
+        const extractedId =  vidId;
 
         const res = await youtubesearchapi.GetVideoDetails(extractedId);
+        console.log(res)
 
         const thumbnails = res.thumbnail.thumbnails;
         thumbnails.sort((a: {width: number}, b: {width: number}) => a.width < b.width ? -1 : 1);
@@ -49,7 +66,7 @@ export async function POST(req: NextRequest) {
         const stream = await prismaClient.stream.create({
             data: {
                 userId: String(data.creatorId),
-                url: data.url,
+                url: data.url ?? `https://www.youtube.com/watch?v=${extractedId}`,
                 extractedId,
                 type: "Youtube",
                 title: res.title ?? "Cant find video",
