@@ -4,22 +4,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 //@ts-ignore
-import { ChevronUp, ChevronDown, ThumbsDown, Play, Share2, Axis3DIcon, Search } from "lucide-react"
+import { ChevronUp, ChevronDown, Play, Plus } from "lucide-react"
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { Appbar } from '../components/Appbar'
-// import LiteYouTubeEmbed from 'react-lite-youtube-embed';
-// import 'react-lite-youtube-embed/dist/LiteYouTubeEmbed.css'
 import { YT_REGEX } from '../lib/utils'
 //@ts-ignore
 import YouTubePlayer from 'youtube-player';
 import Dialog from './Modal'
-import { useAppSelector } from '@/lib/hooks'
-import { stat } from 'fs'
-import { setUserId } from '@/lib/slices/user/user'
-import { searchYouTube } from '@/lib/searchServices/youtubesearch'
 import SearchResults from './SearchDebounce'
-import { Plus } from 'lucide-react'
+
 interface Video {
     "id": string,
     "type": string,
@@ -34,46 +28,46 @@ interface Video {
     "haveUpvoted": boolean
 }
 interface VideoQueueItem {
-     id: string;
-  type: 'video';
-  title: string;
-  channelTitle: string;
-  isLive: boolean;
-  thumbnail: {
-    thumbnails: {
-      url: string;
-      width: number;
-      height: number;
-    }[];
-  };
-  shortBylineText: {
-    runs: {
-      text: string;
-      navigationEndpoint: {
-        clickTrackingParams: string;
-        commandMetadata: {
-          webCommandMetadata: {
+    id: string;
+    type: 'video';
+    title: string;
+    channelTitle: string;
+    isLive: boolean;
+    thumbnail: {
+        thumbnails: {
             url: string;
-            webPageType: string;
-            rootVe: number;
-            apiUrl: string;
-          };
-        };
-        browseEndpoint: {
-          browseId: string;
-          canonicalBaseUrl: string;
-        };
-      };
-    }[];
-  };
-  length: {
-    accessibility: {
-      accessibilityData: {
-        label: string;
-      };
+            width: number;
+            height: number;
+        }[];
     };
-    simpleText: string;
-  };
+    shortBylineText: {
+        runs: {
+            text: string;
+            navigationEndpoint: {
+                clickTrackingParams: string;
+                commandMetadata: {
+                    webCommandMetadata: {
+                        url: string;
+                        webPageType: string;
+                        rootVe: number;
+                        apiUrl: string;
+                    };
+                };
+                browseEndpoint: {
+                    browseId: string;
+                    canonicalBaseUrl: string;
+                };
+            };
+        }[];
+    };
+    length: {
+        accessibility: {
+            accessibilityData: {
+                label: string;
+            };
+        };
+        simpleText: string;
+    };
 }
 
 const REFRESH_INTERVAL_MS = 10 * 1000;
@@ -90,11 +84,10 @@ export default function StreamView({
     const [currentVideo, setCurrentVideo] = useState<Video | null>(null)
     const [loading, setLoading] = useState(false);
     const [playNextLoader, setPlayNextLoader] = useState(false);
-    const videoPlayerRef = useRef<HTMLDivElement>();
-    const [userId, setUserId] = useState("")
+    const videoPlayerRef = useRef<HTMLDivElement>(null);
     const [useAi, setUseAi] = useState(false)
     const [tentativeQueue, setTentativeQueue] = useState<VideoQueueItem[]>([]);
-    const[doneButto,setDoneButton] = useState(false)
+    const [isAiLoading, setIsAiLoading] = useState(false);
 
 
     async function refreshStreams() {
@@ -102,7 +95,7 @@ export default function StreamView({
             credentials: "include"
         });
         const json = await res.json();
-        setQueue(json?.streams?.sort((a: any, b: any) => a.upvotes < b.upvotes ? 1 : -1));
+        setQueue(json?.streams?.sort((a: any, b: any) => b.upvotes - a.upvotes));
 
         setCurrentVideo(video => {
             if (video?.id === json.activeStream?.stream?.id) {
@@ -117,23 +110,23 @@ export default function StreamView({
         const interval = setInterval(() => {
             refreshStreams();
         }, REFRESH_INTERVAL_MS)
-    }, [])
+        return () => clearInterval(interval);
+    }, [creatorId])
 
     useEffect(() => {
-        if (!videoPlayerRef.current) {
+        if (!videoPlayerRef.current || !currentVideo?.extractedId) {
             return;
         }
         let player = YouTubePlayer(videoPlayerRef.current);
 
-        // 'loadVideoById' is queued until the player is ready to receive API calls.
-        player.loadVideoById(currentVideo?.extractedId);
+        player.loadVideoById(currentVideo.extractedId);
 
-        // 'playVideo' is queue until the player is ready to received API calls and after 'loadVideoById' has been called.
-        player.playVideo();
-        function eventHandler(event: any) {
-            console.log(event);
-            console.log(event.data);
-            if (event.data === 0) {
+        if (playVideo) {
+            player.playVideo();
+        }
+
+        const eventHandler = (event: any) => {
+            if (event.data === 0) { // Video ended
                 playNext();
             }
         };
@@ -141,15 +134,18 @@ export default function StreamView({
         return () => {
             player.destroy();
         }
-    }, [currentVideo, videoPlayerRef])
+    }, [currentVideo, playVideo])
     const [searchList, setSearchList] = useState([])
 
     useEffect(() => {
+        if (inputLink.trim() === '' || useAi) {
+            setSearchList([]);
+            return;
+        }
 
         const fetchYouTubeResults = async () => {
             const searchList = await fetch('/api/search', { body: JSON.stringify({ query: inputLink }), method: 'POST' })
             const data = await searchList.json()
-            console.log(data)
             setSearchList(data.items)
         }
 
@@ -157,51 +153,81 @@ export default function StreamView({
             fetchYouTubeResults();
         }, 300);
         return () => clearTimeout(debounceTimer);
-    }, [inputLink])
+    }, [inputLink, useAi])
 
     const handleClick = async (id: string) => {
         setLoading(true);
-        const res = await fetch("/api/streams/", {
-            method: "POST",
-            body: JSON.stringify({
-                creatorId,
-                id: id
-            })
-        });
-        const data = await res.json();
-        setQueue(prevQueue => [...(prevQueue || []), data]);
-        setLoading(false);
-        setInputLink('')
+        try {
+            const res = await fetch("/api/streams/", {
+                method: "POST",
+                body: JSON.stringify({
+                    creatorId,
+                    id: id
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setQueue(prevQueue => [...(prevQueue || []), data].sort((a,b) => b.upvotes - a.upvotes));
+                // Remove from tentative queue after successfully adding to the main queue
+                setTentativeQueue(prev => prev.filter(video => video.id !== id));
+                toast.success("Added to queue!");
+            } else {
+                toast.error(data.message || "Failed to add video.");
+            }
+        } catch (error) {
+            toast.error("An error occurred.");
+        } finally {
+            setLoading(false);
+            setInputLink('');
+        }
     }
     const handleAiSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        const res = await fetch('/api/aiplaylist', {
-            method: 'POST',
-            body: JSON.stringify({ text: inputLink })
-        })
-        const data = await res.json()
-        console.log(data)
-        setTentativeQueue(data)
-        //    toast.success("Added to queue")
-        setLoading(false);
-        setInputLink('')
+        setIsAiLoading(true); // Start AI loading
+        setTentativeQueue([]); // Clear previous suggestions
+        try {
+            const res = await fetch('/api/aiplaylist', {
+                method: 'POST',
+                body: JSON.stringify({ text: inputLink })
+            })
+            const data = await res.json()
+            setTentativeQueue(data)
+        } catch (error) {
+            toast.error("Failed to fetch AI playlist.");
+        } finally {
+            setIsAiLoading(false); // Stop AI loading
+            setInputLink('')
+        }
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!inputLink.match(YT_REGEX)) {
+            toast.error("Please enter a valid YouTube link.");
+            return;
+        }
         setLoading(true);
-        const res = await fetch("/api/streams/", {
-            method: "POST",
-            body: JSON.stringify({
-                creatorId,
-                url: inputLink
-            })
-        });
-        const data = await res.json();
-        setQueue(prevQueue => [...(prevQueue || []), data]);
-        setLoading(false);
-        setInputLink('')
+        try {
+            const res = await fetch("/api/streams/", {
+                method: "POST",
+                body: JSON.stringify({
+                    creatorId,
+                    url: inputLink
+                })
+            });
+            const data = await res.json();
+             if (res.ok) {
+                setQueue(prevQueue => [...(prevQueue || []), data].sort((a, b) => b.upvotes - a.upvotes));
+                toast.success("Added to queue!");
+            } else {
+                toast.error(data.message || "Failed to add video.");
+            }
+        } catch (error) {
+            toast.error("An error occurred.");
+        } finally {
+            setLoading(false);
+            setInputLink('')
+        }
     }
 
     const handleVote = (id: string, isUpvote: boolean) => {
@@ -210,7 +236,7 @@ export default function StreamView({
                 ? {
                     ...video,
                     upvotes: isUpvote ? video.upvotes + 1 : video.upvotes - 1,
-                    haveUpvoted: !video.haveUpvoted
+                    haveUpvoted: isUpvote
                 }
                 : video
         ).sort((a, b) => (b.upvotes) - (a.upvotes)))
@@ -234,9 +260,11 @@ export default function StreamView({
                 setCurrentVideo(json.stream)
                 setQueue(q => q.filter(x => x.id !== json.stream?.id))
             } catch (e) {
-
+                toast.error("Could not play the next video.");
             }
             setPlayNextLoader(false)
+        } else {
+            toast.info("Queue is empty.");
         }
     }
 
@@ -250,8 +278,11 @@ export default function StreamView({
                     <div className='col-span-3'>
                         <div className="space-y-4">
                             <h2 className="text-2xl font-bold text-white">Upcoming Songs</h2>
-                            {(!queue || queue?.length === 0) && <Card className="bg-gray-900 border-gray-800 w-full">
-                                <CardContent className="p-4"><p className="text-center py-8 text-gray-400">No videos in queue</p></CardContent></Card>}
+                            {(!queue || queue?.length === 0) && tentativeQueue.length === 0 && !isAiLoading && (
+                                <Card className="bg-gray-900 border-gray-800 w-full">
+                                    <CardContent className="p-4"><p className="text-center py-8 text-gray-400">No videos in queue</p></CardContent>
+                                </Card>
+                            )}
                             {queue?.map((video) => (
                                 <Card key={video.id} className="bg-gray-900 border-gray-800">
                                     <CardContent className="p-4 flex items-center space-x-4">
@@ -266,7 +297,7 @@ export default function StreamView({
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => handleVote(video.id, video.haveUpvoted ? false : true)}
+                                                    onClick={() => handleVote(video.id, !video.haveUpvoted)}
                                                     className="flex items-center space-x-1 bg-gray-800 text-white border-gray-700 hover:bg-gray-700"
                                                 >
                                                     {video.haveUpvoted ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
@@ -277,7 +308,15 @@ export default function StreamView({
                                     </CardContent>
                                 </Card>
                             ))}
-                            {tentativeQueue.length>0 && tentativeQueue.map((video) => (<Card className="bg-gray-900 border-gray-800">
+                             {/* AI Loading state */}
+                            {isAiLoading && (
+                                <Card className="bg-gray-900 border-gray-800">
+                                    <CardContent className="p-4 flex justify-center items-center">
+                                        <p className="text-gray-400">AI is thinking...</p>
+                                    </CardContent>
+                                </Card>
+                            )}
+                            {tentativeQueue.length > 0 && tentativeQueue.map((video) => (<Card key={video.id} className="bg-gray-900 border-gray-800">
                                 <CardContent className="p-4 flex items-center space-x-4">
                                     <img
                                         src={video.thumbnail?.thumbnails[0].url}
@@ -285,9 +324,8 @@ export default function StreamView({
                                         className="w-30 h-20 object-cover rounded"
                                     />
                                     <div className="flex-grow">
-                                        <h3 className="font-semibold text-white">{`${video?.title?.slice(0,30)}...`}</h3>
+                                        <h3 className="font-semibold text-white">{`${video?.title?.slice(0, 30)}...`}</h3>
                                     </div>
-                                    {/* The key difference is this button */}
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -298,9 +336,7 @@ export default function StreamView({
                                         <span>Add</span>
                                     </Button>
                                 </CardContent>
-                            </Card>))
-
-                            }
+                            </Card>))}
 
                         </div>
                     </div>
@@ -310,9 +346,7 @@ export default function StreamView({
                                 <h1 className="text-xl font-bold text-white">Add a song</h1>
                                 <div>
                                     <Button onClick={() => {
-                                        setUseAi((prev) => {
-                                            return !prev
-                                        })
+                                        setUseAi((prev) => !prev)
                                         setInputLink('')
                                     }} className={`w-full ${!useAi ? 'animate-bounce' : ''} bg-inherit border-2 border-purple-700 hover:bg-purple-800 text-white`}>{useAi ? "YT Search" : "Ask Ai"}</Button>
                                 </div>
@@ -321,7 +355,7 @@ export default function StreamView({
                                 </div>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-2">
+                            <form onSubmit={useAi ? handleAiSubmit : handleSubmit} className="space-y-2">
                                 {!useAi ? <>
                                     <Input
                                         type="text"
@@ -331,7 +365,7 @@ export default function StreamView({
                                         className="bg-gray-900 text-white border-gray-700 placeholder-gray-500"
                                     />
                                     <SearchResults isSearching={false} searchList={searchList} onSelectSearchResult={handleClick} />
-                                    <Button disabled={loading} onClick={handleSubmit} type="submit" className="w-full bg-purple-700 hover:bg-purple-800 text-white">{loading ? "Loading..." : "Add to Queue"}</Button>
+                                    <Button disabled={loading} type="submit" className="w-full bg-purple-700 hover:bg-purple-800 text-white">{loading ? "Loading..." : "Add to Queue"}</Button>
                                 </> : <>
                                     <Input
                                         type="text"
@@ -340,22 +374,13 @@ export default function StreamView({
                                         onChange={(e) => setInputLink(e.target.value)}
                                         className="bg-gray-900 text-white border-gray-700 placeholder-gray-500"
                                     />
-                                    {/* <SearchResults isSearching={false} searchList={searchList} onSelectSearchResult={handleClick} /> */}
-                                    <Button disabled={loading} onClick={handleAiSubmit} type="submit" className="w-full bg-purple-700 hover:bg-purple-800 text-white">{loading ? "Loading..." : "Add to Queue"}</Button>
-                                    {tentativeQueue.length>0 && <Button  onClick={()=>{setTentativeQueue([])
-                                        setDoneButton(false)
-                                    }} type="submit" className="w-full bg-purple-700 hover:bg-purple-800 text-white">{"Done Selecting"}</Button>}
+                                    <Button disabled={isAiLoading} type="submit" className="w-full bg-purple-700 hover:bg-purple-800 text-white">{isAiLoading ? "Loading..." : "Ask AI"}</Button>
+                                    {tentativeQueue.length > 0 && <Button onClick={() => {
+                                        setTentativeQueue([])
+                                    }} type="button" className="w-full bg-gray-700 hover:bg-gray-800 text-white mt-2">{"Clear Suggestions"}</Button>}
                                 </>}
 
                             </form>
-
-                            {inputLink && inputLink.match(YT_REGEX) && !loading && (
-                                <Card className="bg-gray-900 border-gray-800">
-                                    <CardContent className="p-4">
-                                        {/* <LiteYouTubeEmbed title="" id={inputLink.split("?v=")[1]} /> */}
-                                    </CardContent>
-                                </Card>
-                            )}
 
                             <div className="space-y-4">
                                 <h2 className="text-2xl font-bold text-white">Now Playing</h2>
@@ -366,10 +391,10 @@ export default function StreamView({
                                                 {playVideo ? <>
                                                     {/* @ts-ignore */}
                                                     <div ref={videoPlayerRef} className='w-full' />
-                                                    {/* <iframe width={"100%"} height={300} src={`https://www.youtube.com/embed/${currentVideo.extractedId}?autoplay=1`} allow="autoplay"></iframe> */}
                                                 </> : <>
                                                     <img
                                                         src={currentVideo.bigImg}
+                                                        alt={`Thumbnail for ${currentVideo.title}`}
                                                         className="w-full h-72 object-cover rounded"
                                                     />
                                                     <p className="mt-2 text-center font-semibold text-white">{currentVideo.title}</p>
@@ -387,22 +412,6 @@ export default function StreamView({
                     </div>
                 </div>
             </div>
-            <ToastContainer
-                position="top-right"
-                autoClose={3000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="dark"
-            />
         </div>
     )
-}
-
-function dispatch(arg0: any) {
-    throw new Error('Function not implemented.')
 }
