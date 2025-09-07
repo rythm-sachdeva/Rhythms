@@ -16,7 +16,7 @@ const MAX_QUEUE_LEN = 20;
 
 export async function POST(req: NextRequest) {
     try {
-        let vidId;
+         let vidId;
         const data = CreateStreamSchema.parse(await req.json());
        if(data.url){ const isYt = data.url.match(YT_REGEX)
         if (!isYt) {

@@ -160,6 +160,10 @@ export default function StreamView({
         try {
             const res = await fetch("/api/streams/", {
                 method: "POST",
+                headers: {
+              // The 'Content-Type' header is also crucial
+            'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({
                     creatorId,
                     id: id
