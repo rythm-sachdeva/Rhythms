@@ -155,8 +155,9 @@ export default function StreamView({
         return () => clearTimeout(debounceTimer);
     }, [inputLink, useAi])
 
-    const handleClick = async (id: string) => {
+    const handleClick = async (id: any) => {
         setLoading(true);
+        console.log(id)
         try {
             const res = await fetch("/api/streams/", {
                 method: "POST",
