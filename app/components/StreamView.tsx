@@ -155,26 +155,22 @@ export default function StreamView({
         return () => clearTimeout(debounceTimer);
     }, [inputLink, useAi])
 
-    const handleClick = async (id: any) => {
+    const handleClick = async (video: any) => {
         setLoading(true);
-        console.log(id)
+        console.log(video.id)
         try {
             const res = await fetch("/api/streams/", {
                 method: "POST",
-                headers: {
-              // The 'Content-Type' header is also crucial
-            'Content-Type': 'application/json'
-                },
                 body: JSON.stringify({
                     creatorId,
-                    id: id
+                    video:video
                 })
             });
             const data = await res.json();
             if (res.ok) {
                 setQueue(prevQueue => [...(prevQueue || []), data].sort((a,b) => b.upvotes - a.upvotes));
                 // Remove from tentative queue after successfully adding to the main queue
-                setTentativeQueue(prev => prev.filter(video => video.id !== id));
+                setTentativeQueue(prev => prev.filter(vid => vid.id !== video.id));
                 toast.success("Added to queue!");
             } else {
                 toast.error(data.message || "Failed to add video.");
@@ -334,7 +330,7 @@ export default function StreamView({
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => handleClick(video.id)}
+                                        onClick={() => handleClick(video)}
                                         className="flex items-center space-x-2 bg-green-600 text-white border-green-700 hover:bg-green-500"
                                     >
                                         <Plus className="h-4 w-4" />

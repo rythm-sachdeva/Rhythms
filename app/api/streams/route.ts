@@ -6,48 +6,46 @@ import youtubesearchapi from "youtube-search-api";
 import { YT_REGEX } from "@/app/lib/utils";
 import { getServerSession } from "next-auth";
 
-const CreateStreamSchema = z.object({
-    creatorId: z.string(),
-    url: z.string().optional(),
-    id: z.string().optional()
+
+
+
+const videoSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  thumbnail: z.object({
+      thumbnails: z.array(
+        z.object({
+          url: z.string().url(),
+          width: z.number().optional(),
+          height: z.number().optional(),
+        })
+      ).optional(),
+    }).optional(),
+  channel: z.object({
+      name: z.string().optional(),
+    }).optional(),
+  url: z.string().optional(),
 });
 
-const MAX_QUEUE_LEN = 20;
+const CreateStreamSchema = z.object({
+    creatorId: z.string(),
+    video: videoSchema
+    
+});
+
+
+
+const MAX_QUEUE_LEN = 100;
 
 export async function POST(req: NextRequest) {
     try {
-         let vidId;
-        const data = CreateStreamSchema.parse(await req.json());
-       if(data.url){ const isYt = data.url.match(YT_REGEX)
-        if (!isYt) {
-            return NextResponse.json({
-                message: "Wrong URL format"
-            }, {
-                status: 411
-            })    
-        }
-        vidId =data.url.split("?v=")[1]
-       }
-       else{
-        if(!data.id){
-            return NextResponse.json({
-                message: "No URL or ID provided"
-            }, {
-                status: 411
-            })    
-        }
-        vidId = data.id
-       }
 
-        
+         const data = CreateStreamSchema.parse(await req.json());
+        // const res = await youtubesearchapi.GetVideoDetails(extractedId);
+       const video = data.video;
 
-        const extractedId =  vidId;
-
-        const res = await youtubesearchapi.GetVideoDetails(extractedId);
-        console.log(res)
-
-        const thumbnails = res.thumbnail.thumbnails;
-        thumbnails.sort((a: {width: number}, b: {width: number}) => a.width < b.width ? -1 : 1);
+        const thumbnails = video.thumbnail?.thumbnails;
+        // if(thumbnails) thumbnails.sort((a: {width: number}, b: {width: number}) => a.width < b.width ? -1 : 1);
 
         const existingActiveStream = await prismaClient.stream.count({
             where: {
@@ -62,15 +60,16 @@ export async function POST(req: NextRequest) {
                 status: 411
             })
         }
-
         const stream = await prismaClient.stream.create({
             data: {
                 userId: String(data.creatorId),
-                url: data.url ?? `https://www.youtube.com/watch?v=${extractedId}`,
-                extractedId,
+                url: video.url ?? `https://www.youtube.com/watch?v=${video.id}`,
+                extractedId:video.id,
                 type: "Youtube",
-                title: res.title ?? "Cant find video",
-                smallImg: (thumbnails.length > 1 ? thumbnails[thumbnails.length - 2].url : thumbnails[thumbnails.length - 1].url) ?? "https://cdn.pixabay.com/photo/2024/02/28/07/42/european-shorthair-8601492_640.jpg",
+                title: video.title ?? "Cant find video",
+                //@ts-ignore
+                smallImg: (thumbnails?.length > 1 ? thumbnails[thumbnails.length - 2].url : thumbnails[thumbnails.length - 1].url) ?? "https://cdn.pixabay.com/photo/2024/02/28/07/42/european-shorthair-8601492_640.jpg",
+                //@ts-ignore
                 bigImg: thumbnails[thumbnails.length - 1].url ?? "https://cdn.pixabay.com/photo/2024/02/28/07/42/european-shorthair-8601492_640.jpg",
                 addedById:String(data.creatorId)
             }

@@ -21,6 +21,8 @@ interface SearchResultsProps {
     onSelectSearchResult: (video: SearchResult) => void;
 }
 
+
+
 /**
  * A component that displays the top 3 YouTube search results.
  * It shows a loading state and handles clicks on individual results.
@@ -43,7 +45,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ isSearching, searchList, 
                     key={video.id} 
                     className="flex items-center p-2 space-x-3 bg-gray-900 border border-gray-800 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors"
                     //@ts-ignore
-                    onClick={() => onSelectSearchResult(video?.id)}
+                    onClick={() => ( onSelectSearchResult(video))}
                 >
                     
                     <img 
